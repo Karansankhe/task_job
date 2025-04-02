@@ -11,7 +11,7 @@ A personal AI chatbot powered by Google Gemini (Generative AI) for text-based co
 
 🛠️ Setup & Installation
 1️⃣ Clone the Repository
-git clone https://github.com/your-username/karan-ai-assistant.git
+git clone https://github.com/Karansankhe/task_job.git
 cd .\Personal-Voice-Assistant  
 
 2️⃣ Create a Virtual Environment
