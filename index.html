@@ -261,7 +261,7 @@
             loading.style.display = 'block';
             status.classList.add('listening');
             try {
-                const response = await fetch('http://localhost:5000/chat', {
+                const response = await fetch('/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -321,7 +321,7 @@
                 responseContainer.classList.add('show');
                 
                 // Process text to speech
-                const response = await fetch('http://localhost:5000/process-text', {
+                const response = await fetch('/process-text', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
