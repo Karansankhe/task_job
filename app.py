@@ -3,7 +3,6 @@ from flask_cors import CORS
 import json
 import google.generativeai as genai
 from io import BytesIO
-from elevenlabs import play
 from elevenlabs.client import ElevenLabs
 import os
 import re
