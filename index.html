@@ -261,7 +261,7 @@
             loading.style.display = 'block';
             status.classList.add('listening');
             try {
-                const response = await fetch('/chat', {
+                const response = await fetch('http://127.0.0.1:5000/chat', { // Updated URL
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -321,7 +321,7 @@
                 responseContainer.classList.add('show');
                 
                 // Process text to speech
-                const response = await fetch('/process-text', {
+                const response = await fetch('http://127.0.0.1:5000/process-text', { // Updated URL
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -352,8 +352,20 @@
             console.error('Recognition error:', event.error);
             isListening = false;
             mic.classList.remove('user-speaking');
-            document.getElementById('recognizedText').textContent = "Error occurred. Please try again.";
+            status.classList.remove('listening');
+            if (event.error === 'no-speech') {
+                document.getElementById('recognizedText').textContent = "No speech detected. Please try again.";
+            } else {
+                document.getElementById('recognizedText').textContent = "Error occurred. Please try again.";
+            }
         };
+
+        // Define the speak function for text-to-speech fallback
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
     
         mic.addEventListener('click', () => {
             if (!isListening) {
