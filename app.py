@@ -116,15 +116,18 @@ def home():
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
     if request.method == 'OPTIONS':
-        return '', 204
-        
+        return '', 204  # Handle preflight requests for CORS
+
+    if request.method != 'POST':
+        return jsonify({'error': 'Method Not Allowed'}), 405
+
     try:
         user_message = request.json.get('message')
         history = request.json.get('history', [])
-        
+
         if not user_message:
             return jsonify({'error': 'No message provided'}), 400
-            
+
         response, history = send_message(user_message, history)
         return jsonify({'message': response, "history": history})
     except Exception as e:
@@ -141,8 +144,11 @@ def sanitize_text_for_speech(text):
 @app.route('/process-text', methods=['POST', 'OPTIONS'])
 def process_text():
     if request.method == 'OPTIONS':
-        return '', 204
-        
+        return '', 204  # Handle preflight requests for CORS
+
+    if request.method != 'POST':
+        return jsonify({"error": "Method Not Allowed"}), 405
+
     try:
         user_data = request.get_json()
         user_text = user_data.get('text', '')
