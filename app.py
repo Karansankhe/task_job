@@ -111,7 +111,7 @@ def send_message(message, history):
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('fabulous-axolotl-99b771.netlify.app')
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
