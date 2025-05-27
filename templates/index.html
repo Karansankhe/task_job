@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karan Sankhe's AI Assistant</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #2c3e50;
+        }
+        
+        .container {
+            background: #ffffff;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            width: 450px;
+            text-align: center;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #4facfe;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: #4facfe;
+        }
+
+        h1 {
+            color: #4facfe;
+            font-size: 28px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+
+        #recognizedText {
+            font-size: 18px;
+            color: #2c3e50;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            min-height: 60px;
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        #recognizedText:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
+        }
+
+        /* Enhanced Microphone Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3); }
+            50% { transform: scale(1.1); box-shadow: 0 15px 30px rgba(79, 172, 254, 0.5); }
+            100% { transform: scale(1); box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3); }
+        }
+
+        @keyframes wave {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(10deg); }
+            75% { transform: rotate(-10deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px #4facfe, 0 0 10px #4facfe, 0 0 15px #4facfe; }
+            50% { box-shadow: 0 0 10px #4facfe, 0 0 20px #4facfe, 0 0 30px #4facfe; }
+            100% { box-shadow: 0 0 5px #4facfe, 0 0 10px #4facfe, 0 0 15px #4facfe; }
+        }
+
+        .microphone {
+            margin: 30px auto;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #4facfe;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .microphone::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #4facfe;
+            opacity: 0.3;
+            animation: ripple 2s infinite;
+        }
+
+        .microphone:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 30px rgba(79, 172, 254, 0.4);
+        }
+
+        .microphone svg {
+            width: 60px;
+            height: 60px;
+            fill: white;
+            transition: all 0.3s ease;
+        }
+
+        .user-speaking {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        .bot-speaking {
+            animation: wave 2s infinite ease-in-out, glow 2s infinite ease-in-out;
+        }
+
+        .bot-speaking svg {
+            animation: wave 2s infinite ease-in-out;
+        }
+
+        /* Status Indicator with enhanced animation */
+        .status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4facfe;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 5px #4facfe;
+        }
+
+        .status.listening {
+            background: #e74c3c;
+            animation: pulse 1s infinite, glow 1s infinite;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: none;
+            margin: 20px auto;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .response-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            min-height: 60px;
+            display: none;
+            transition: all 0.3s ease;
+        }
+
+        .response-container.show {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .response-label {
+            color: #4facfe;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+
+        .response-text {
+            color: #2c3e50;
+            font-size: 16px;
+            text-align: left;
+            line-height: 1.5;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="status"></div>
+        <h1>Karan Sankhe's AI Assistant</h1>
+        <p class="subtitle">Your Personal AI Companion</p>
+
+        <p id="recognizedText">Click the microphone to start speaking...</p>
+        <div class="response-container" id="responseContainer">
+            <div class="response-label">Assistant's Response:</div>
+            <div class="response-text" id="responseText"></div>
+        </div>
+        <div class="loading" id="loading"></div>
+        <div class="microphone" id="microphone">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M12 15c1.656 0 3-1.344 3-3v-6c0-1.656-1.344-3-3-3s-3 1.344-3 3v6c0 1.656 1.344 3 3 3zm7-3h-1c0 2.76-2.241 5-5 5s-5-2.24-5-5h-1c0 3.038 2.278 5.527 5 5.937v3.063h-3v2h8v-2h-3v-3.063c2.722-.41 5-2.899 5-5.937z"/>
+            </svg>
+        </div>
+        <audio id="audioPlayer" style="display: none;"></audio>
+    </div>
+    <script>
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        let history = []; // To maintain the conversation history
+    
+        const mic = document.getElementById('microphone');
+        const audioPlayer = document.getElementById('audioPlayer');
+        let isListening = false;
+    
+        function sanitizeText(text) {
+            return text.replace(/[*_#`~>-]|\[|\]|\(|\)|\{|\}|\\|\/|\||\+|@|&|%|\$|^|!|"|'|;|:|,|\./g, '').trim();
+        }
+    
+        // Add loading indicator
+        const loading = document.getElementById('loading');
+        const status = document.querySelector('.status');
+        const responseContainer = document.getElementById('responseContainer');
+        const responseText = document.getElementById('responseText');
+
+        async function getChatResponse(transcript) {
+            loading.style.display = 'block';
+            status.classList.add('listening');
+            try {
+                const response = await fetch('https://task-job-2.onrender.com/chat', { // Updated URL
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: transcript,
+                        history: history
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                history = data.history;
+                return data.message;
+            } catch (error) {
+                console.error("Error fetching chat response:", error);
+                return "I'm sorry, something went wrong. Please try again.";
+            } finally {
+                loading.style.display = 'none';
+                status.classList.remove('listening');
+            }
+        }
+    
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.continuous = false;
+    
+        recognition.onstart = () => {
+            isListening = true;
+            mic.classList.add('user-speaking');
+            status.classList.add('listening');
+            document.getElementById('recognizedText').textContent = "Listening...";
+        };
+    
+        recognition.onend = () => {
+            isListening = false;
+            mic.classList.remove('user-speaking');
+            status.classList.remove('listening');
+        };
+    
+        recognition.onresult = async (event) => {
+            const currentTranscript = event.results[event.resultIndex][0].transcript;
+            console.log("User said:", currentTranscript);
+            document.getElementById('recognizedText').textContent = currentTranscript;
+            responseContainer.classList.remove('show');
+    
+            try {
+                // Get the bot's response from the server
+                const botReply = await getChatResponse(currentTranscript);
+                
+                // Display the response text
+                responseText.textContent = botReply;
+                responseContainer.classList.add('show');
+                
+                // Process text to speech
+                const response = await fetch('https://task-job-2.onrender.com/process-text', { // Updated URL
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: botReply })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioPlayer.src = audioUrl;
+                await audioPlayer.play();
+                
+                // Clean up the URL after playing
+                audioPlayer.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                };
+            } catch (error) {
+                console.error("Error processing response:", error);
+                speak("I'm sorry, there was an error processing your request.");
+            }
+        };
+    
+        recognition.onerror = (event) => {
+            console.error('Recognition error:', event.error);
+            isListening = false;
+            mic.classList.remove('user-speaking');
+            status.classList.remove('listening');
+            if (event.error === 'no-speech') {
+                document.getElementById('recognizedText').textContent = "No speech detected. Please try again.";
+            } else {
+                document.getElementById('recognizedText').textContent = "Error occurred. Please try again.";
+            }
+        };
+
+        // Define the speak function for text-to-speech fallback
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+    
+        mic.addEventListener('click', () => {
+            if (!isListening) {
+                recognition.start();
+            } else {
+                recognition.stop();
+            }
+        });
+    </script>    
+</body>
+</html>
