@@ -197,29 +197,30 @@ from io import BytesIO
 import requests
 import os
 import re
-from dotenv import load_dotenv
-
-# Load environment variables before using os
-load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# Load API keys from environment
-google_api_key = os.getenv("GOOGLE_API_KEY")
-sarvam_api_key = os.getenv("SARVAM_API_KEY")
+# Directly set API keys
+google_api_key = "AIzaSyBxiJpGiHEHIZLMDS2ikBa46CgjxZUhV4g"  # Replace this if needed
+sarvam_api_key = "9ebcdaa4-6832-4ba2-8d3d-1cacc2748d5f"
 
-if not google_api_key or not sarvam_api_key:
-    raise EnvironmentError("Missing GOOGLE_API_KEY or SARVAM_API_KEY in .env")
+# Load Karan's profile data
+try:
+    with open("karan_info.json", "r") as file:
+        karan_data = json.load(file)
 
-# Configure Gemini API
-genai.configure(api_key=google_api_key)
-model = genai.GenerativeModel('gemini-2.0-flash')
+    if not google_api_key or not sarvam_api_key:
+        raise ValueError("API keys are missing")
 
-# Load Karan info JSON
-with open("karan_info.json", "r") as f:
-    karan_data = json.load(f)
+    genai.configure(api_key=google_api_key)
+    model = genai.GenerativeModel('gemini-2.0-flash')
 
+except Exception as e:
+    print(f"Error loading configuration: {e}")
+    raise
+
+# Prompt with personality
 PERSONALITY_PROMPT = f"""You are Karan Sankhe, a passionate computer engineer and AI enthusiast. Here is your detailed background:
 
 Personal Information:
@@ -258,6 +259,7 @@ When responding to questions:
 10. Show your commitment to continuous learning
 """
 
+# Function to handle chat
 def send_message(message, history):
     try:
         if not history:
@@ -287,6 +289,9 @@ def chat():
     if request.method == 'OPTIONS':
         return '', 204
 
+    if request.method != 'POST':
+        return jsonify({'error': 'Method Not Allowed'}), 405
+
     try:
         user_message = request.json.get('message')
         history = request.json.get('history', [])
@@ -302,7 +307,8 @@ def chat():
         return jsonify({'error': 'Internal server error'}), 500
 
 def sanitize_text_for_speech(text):
-    text = re.sub(r'[*_#`~>\[\](){}\\/|+@&%$^!"\';:,.]', '', text)
+    # Remove unwanted characters for cleaner TTS
+    text = re.sub(r'[*_#`~>-]|\[|\]|\(|\)|\{|\}|\\|\/|\||\+|@|&|%|\$|^|!|"|\'|;|:|,|\.', '', text)
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
@@ -310,6 +316,9 @@ def sanitize_text_for_speech(text):
 def process_text():
     if request.method == 'OPTIONS':
         return '', 204
+
+    if request.method != 'POST':
+        return jsonify({"error": "Method Not Allowed"}), 405
 
     try:
         user_data = request.get_json()
@@ -334,7 +343,7 @@ def process_text():
         response = requests.post("https://api.sarvam.ai/text-to-speech", headers=headers, json=payload)
 
         if response.status_code != 200:
-            print(f"TTS Error: {response.text}")
+            print(response.text)
             return jsonify({"error": "TTS conversion failed", "status": response.status_code}), 500
 
         audio_buffer = BytesIO(response.content)
