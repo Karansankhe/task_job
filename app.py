@@ -194,7 +194,7 @@ from flask_cors import CORS
 import json
 import google.generativeai as genai
 from io import BytesIO
-from elevenlabs import ElevenLabs
+import requests
 import os
 import re
 from dotenv import load_dotenv
@@ -203,30 +203,26 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
 # Load Karan's information and configure API keys
 try:
     with open("karan_info.json", "r") as file:
         karan_data = json.load(file)
 
-    # Get API keys from environment variables
     google_api_key = os.getenv('GOOGLE_API_KEY')
-    eleven_labs_api_key = os.getenv('ELEVEN_LABS_API_KEY')
+    sarvam_api_key = os.getenv('SARVAM_API_KEY')
 
-    if not google_api_key or not eleven_labs_api_key:
+    if not google_api_key or not sarvam_api_key:
         raise ValueError("API keys not found in environment variables")
 
-    # Configure APIs
     genai.configure(api_key=google_api_key)
-    client = ElevenLabs(api_key=eleven_labs_api_key)
     model = genai.GenerativeModel('gemini-2.0-flash')
 
 except Exception as e:
     print(f"Error loading configuration: {e}")
     raise
 
-# Define personality prompt with Karan's information
 PERSONALITY_PROMPT = f"""You are Karan Sankhe, a passionate computer engineer and AI enthusiast. Here is your detailed background:
 
 Personal Information:
@@ -334,19 +330,24 @@ def process_text():
 
         sanitized_text = sanitize_text_for_speech(user_text)
 
-        # Generate audio from text using ElevenLabs
-        audio_generator = client.text_to_speech.convert(
-            text=sanitized_text,
-            voice_id="JBFqnCBsd6RMkjVDRZzb",  # Replace with your preferred voice ID
-            model_id="eleven_multilingual_v2",
-            output_format="mp3_44100_128"
-        )
+        headers = {
+            "x-api-key": sarvam_api_key,
+            "Content-Type": "application/json"
+        }
 
-        # Join the generator into a bytes object
-        audio_bytes = b"".join(audio_generator)
+        payload = {
+            "input": sanitized_text,
+            "gender": "female",
+            "lang": "en"
+        }
 
-        # Write audio to buffer
-        audio_buffer = BytesIO(audio_bytes)
+        response = requests.post("https://api.sarvam.ai/text-to-speech", headers=headers, json=payload)
+
+        if response.status_code != 200:
+            print(response.text)
+            return jsonify({"error": "TTS conversion failed", "status": response.status_code}), 500
+
+        audio_buffer = BytesIO(response.content)
         audio_buffer.seek(0)
 
         return send_file(
@@ -359,3 +360,6 @@ def process_text():
     except Exception as e:
         print(f"Error in process-text endpoint: {e}")
         return jsonify({"error": "Error generating audio"}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
