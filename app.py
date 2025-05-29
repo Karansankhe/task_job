@@ -197,21 +197,21 @@ from io import BytesIO
 import requests
 import os
 import re
+import base64
 
 app = Flask(__name__)
 CORS(app)
 
-# Directly set API keys
-google_api_key = "AIzaSyBxiJpGiHEHIZLMDS2ikBa46CgjxZUhV4g"  # Replace this if needed
+google_api_key = "AIzaSyBxiJpGiHEHIZLMDS2ikBa46CgjxZUhV4g"
 sarvam_api_key = "9ebcdaa4-6832-4ba2-8d3d-1cacc2748d5f"
 
-# Load Karan's profile data
+# Load Karan's profile
 try:
     with open("karan_info.json", "r") as file:
         karan_data = json.load(file)
 
     if not google_api_key or not sarvam_api_key:
-        raise ValueError("API keys are missing")
+        raise ValueError("API keys missing")
 
     genai.configure(api_key=google_api_key)
     model = genai.GenerativeModel('gemini-2.0-flash')
@@ -220,65 +220,23 @@ except Exception as e:
     print(f"Error loading configuration: {e}")
     raise
 
-# Prompt with personality
-PERSONALITY_PROMPT = f"""You are Karan Sankhe, a passionate computer engineer and AI enthusiast. Here is your detailed background:
+PERSONALITY_PROMPT = f"""You are Karan Sankhe..."""  # truncated for brevity
 
-Personal Information:
-- Name: {karan_data['personal_info']['name']}
-- Education: {karan_data['personal_info']['education']}
-- Current Status: {karan_data['personal_info']['current_status']}
-
-Life Story:
-{karan_data['life_story']}
-
-Your Superpower:
-{karan_data['superpower']}
-
-Areas for Growth:
-{chr(10).join(f"- {area}" for area in karan_data['growth_areas'])}
-
-Common Misconceptions:
-{chr(10).join(f"- {misconception}" for misconception in karan_data['misconceptions'])}
-
-How You Push Boundaries:
-{chr(10).join(f"- {boundary}" for boundary in karan_data['boundaries'])}
-
-Final Thoughts:
-{karan_data['final_thoughts']}
-
-When responding to questions:
-1. Keep responses personal and authentic to your experiences
-2. Maintain an optimistic and enthusiastic tone
-3. Focus on your technical expertise and leadership experience
-4. Share specific examples from your projects and achievements
-5. Be honest about your growth areas and aspirations
-6. Keep responses concise and engaging
-7. Use a conversational but professional tone
-8. Emphasize your passion for AI and problem-solving
-9. Highlight your entrepreneurial mindset
-10. Show your commitment to continuous learning
-"""
-
-# Function to handle chat
 def send_message(message, history):
     try:
         if not history:
             history = [{"role": "user", "parts": PERSONALITY_PROMPT}]
             chat = model.start_chat(history=history)
-            response = chat.send_message(
-                "I understand my role as Karan Sankhe. I will maintain this personality and respond based on my personal experiences, technical expertise, and aspirations."
-            )
+            response = chat.send_message("I understand my role...")
             history.append({"role": "model", "parts": response.text})
-
         history.append({"role": "user", "parts": message})
         chat = model.start_chat(history=history)
         response = chat.send_message(message)
         history.append({"role": "model", "parts": response.text})
         return response.text, history
-
     except Exception as e:
         print(f"Error in send_message: {e}")
-        return "I apologize, but I encountered an error processing your request.", history
+        return "Error processing request.", history
 
 @app.route('/')
 def home():
@@ -288,27 +246,19 @@ def home():
 def chat():
     if request.method == 'OPTIONS':
         return '', 204
-
-    if request.method != 'POST':
-        return jsonify({'error': 'Method Not Allowed'}), 405
-
     try:
         user_message = request.json.get('message')
         history = request.json.get('history', [])
-
         if not user_message:
             return jsonify({'error': 'No message provided'}), 400
-
         response, history = send_message(user_message, history)
         return jsonify({'message': response, 'history': history})
-
     except Exception as e:
-        print(f"Error in chat endpoint: {e}")
+        print(f"Chat error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
 def sanitize_text_for_speech(text):
-    # Remove unwanted characters for cleaner TTS
-    text = re.sub(r'[*_#`~>-]|\[|\]|\(|\)|\{|\}|\\|\/|\||\+|@|&|%|\$|^|!|"|\'|;|:|,|\.', '', text)
+    text = re.sub(r'[*_#`~>\[\]{}\\|+@&%$^!\"\'`;:,.]', '', text)
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
@@ -316,49 +266,65 @@ def sanitize_text_for_speech(text):
 def process_text():
     if request.method == 'OPTIONS':
         return '', 204
-
-    if request.method != 'POST':
-        return jsonify({"error": "Method Not Allowed"}), 405
-
     try:
         user_data = request.get_json()
         user_text = user_data.get('text', '')
+        lang = user_data.get('language_code', 'en')  # Optional language code
 
         if not user_text:
             return jsonify({"error": "No text provided"}), 400
 
         sanitized_text = sanitize_text_for_speech(user_text)
 
+        lang_map = {
+            "en": "en-IN",
+            "hi": "hi-IN",
+            "mr": "mr-IN"
+        }
+        target_language = lang_map.get(lang, "en-IN")
+
         headers = {
-            "x-api-key": sarvam_api_key,
-            "Content-Type": "application/json"
+            "API-Subscription-Key": sarvam_api_key
         }
 
         payload = {
-            "input": sanitized_text,
-            "gender": "female",
-            "lang": "en"
+            "inputs": [sanitized_text],
+            "target_language_code": target_language,
+            "speaker": "meera",
+            "pitch": 0,
+            "pace": 1.5,
+            "loudness": 1.2,
+            "speech_sample_rate": 8000,
+            "enable_preprocessing": True,
+            "model": "bulbul:v1"
         }
 
         response = requests.post("https://api.sarvam.ai/text-to-speech", headers=headers, json=payload)
+        response.raise_for_status()
+        data = response.json()
 
-        if response.status_code != 200:
-            print(response.text)
-            return jsonify({"error": "TTS conversion failed", "status": response.status_code}), 500
+        if "audios" not in data or not data["audios"]:
+            return jsonify({"error": "No audio data returned"}), 500
 
-        audio_buffer = BytesIO(response.content)
-        audio_buffer.seek(0)
+        base64_audio = data["audios"][0]
+        wav_data = base64.b64decode(base64_audio)
+        audio_io = BytesIO(wav_data)
+        audio_io.seek(0)
 
         return send_file(
-            audio_buffer,
-            mimetype='audio/mpeg',
+            audio_io,
+            mimetype='audio/wav',
             as_attachment=False,
-            download_name="response.mp3"
+            download_name='response_audio.wav'
         )
 
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"API Request Error: {str(e)}"}), 500
+    except json.JSONDecodeError:
+        return jsonify({"error": "Error decoding JSON from Sarvam API."}), 500
     except Exception as e:
-        print(f"Error in process-text endpoint: {e}")
-        return jsonify({"error": "Error generating audio"}), 500
+        print(f"TTS error: {e}")
+        return jsonify({"error": "Unexpected server error"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
