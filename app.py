@@ -3,7 +3,7 @@ from flask_cors import CORS
 import json
 import google.generativeai as genai
 from io import BytesIO
-from elevenlabs import generate, set_api_key
+from elevenlabs.client import ElevenLabs
 import os
 import re
 from dotenv import load_dotenv
@@ -27,8 +27,7 @@ try:
         raise ValueError("API keys not found in environment variables")
     
     genai.configure(api_key=google_api_key)
-    set_api_key(eleven_labs_api_key)  # ✅ Fixed: Set API key for ElevenLabs
-
+    client = ElevenLabs(api_key=eleven_labs_api_key)
     model = genai.GenerativeModel('gemini-2.0-flash')
 except Exception as e:
     print(f"Error loading configuration: {e}")
@@ -71,7 +70,20 @@ When responding to questions:
 8. Emphasize your passion for AI and problem-solving
 9. Highlight your entrepreneurial mindset
 10. Show your commitment to continuous learning
-"""
+
+Common questions you should be prepared to answer:
+1. Your life story and background
+2. Your superpower in AI and ML
+3. Areas where you want to grow
+4. Common misconceptions about you
+5. How you push your boundaries
+6. Your academic and career goals
+7. Your leadership experience
+8. Your future aspirations
+9. Your personal values and beliefs
+10. Your approach to learning and development
+
+Please respond to questions while maintaining this personality and focusing on these aspects of your life."""
 
 def send_message(message, history):
     try:
@@ -79,12 +91,13 @@ def send_message(message, history):
         if not history:
             history = [{"role": "user", "parts": PERSONALITY_PROMPT}]
             chat = model.start_chat(history=history)
-            response = chat.send_message("I understand my role as Karan Sankhe...")
+            # Get initial acknowledgment
+            response = chat.send_message("I understand my role as Karan Sankhe. I will maintain this personality and respond based on my personal experiences, technical expertise, and aspirations.")
             history.append({"role": "model", "parts": response.text})
         
         # Add the user's message to history
         history.append({"role": "user", "parts": message})
-
+        
         # Start or continue chat with history
         chat = model.start_chat(history=history)
         response = chat.send_message(message)
@@ -103,7 +116,7 @@ def home():
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
     if request.method == 'OPTIONS':
-        return '', 204
+        return '', 204  # Handle preflight requests for CORS
 
     if request.method != 'POST':
         return jsonify({'error': 'Method Not Allowed'}), 405
@@ -122,14 +135,16 @@ def chat():
         return jsonify({'error': 'Internal server error'}), 500
 
 def sanitize_text_for_speech(text):
+    # Remove special characters and formatting
     text = re.sub(r'[*_#`~>-]|\[|\]|\(|\)|\{|\}|\\|\/|\||\+|@|&|%|\$|^|!|"|\'|;|:|,|\.', '', text)
+    # Remove multiple spaces
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
 @app.route('/process-text', methods=['POST', 'OPTIONS'])
 def process_text():
     if request.method == 'OPTIONS':
-        return '', 204
+        return '', 204  # Handle preflight requests for CORS
 
     if request.method != 'POST':
         return jsonify({"error": "Method Not Allowed"}), 405
@@ -144,15 +159,22 @@ def process_text():
         # Sanitize text before sending to ElevenLabs
         sanitized_text = sanitize_text_for_speech(user_text)
 
-        # ✅ Generate audio using ElevenLabs
-        audio = generate(
+        # Generate audio from text using ElevenLabs
+        audio_generator = client.generate(
             text=sanitized_text,
             voice="Brian",
             model="eleven_monolingual_v1"
         )
+        
+        # Store audio in a BytesIO buffer
+        audio_buffer = BytesIO()
+        for chunk in audio_generator:
+            audio_buffer.write(chunk)
 
-        audio_buffer = BytesIO(audio)
+        # Rewind the buffer to the beginning
+        audio_buffer.seek(0)
 
+        # Send the audio as a file-like response
         return send_file(
             audio_buffer,
             mimetype='audio/mpeg',
