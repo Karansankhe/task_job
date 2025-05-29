@@ -335,15 +335,18 @@ def process_text():
         sanitized_text = sanitize_text_for_speech(user_text)
 
         # Generate audio from text using ElevenLabs
-        audio = client.text_to_speech.convert(
+        audio_generator = client.text_to_speech.convert(
             text=sanitized_text,
             voice_id="JBFqnCBsd6RMkjVDRZzb",  # Replace with your preferred voice ID
             model_id="eleven_multilingual_v2",
             output_format="mp3_44100_128"
         )
 
+        # Join the generator into a bytes object
+        audio_bytes = b"".join(audio_generator)
+
         # Write audio to buffer
-        audio_buffer = BytesIO(audio)
+        audio_buffer = BytesIO(audio_bytes)
         audio_buffer.seek(0)
 
         return send_file(
@@ -356,7 +359,3 @@ def process_text():
     except Exception as e:
         print(f"Error in process-text endpoint: {e}")
         return jsonify({"error": "Error generating audio"}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
