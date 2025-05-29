@@ -28,7 +28,7 @@ try:
     
     genai.configure(api_key=google_api_key)
     client = ElevenLabs(api_key=eleven_labs_api_key)
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    model = genai.GenerativeModel('gemini-2.0-flash')
 except Exception as e:
     print(f"Error loading configuration: {e}")
     raise
