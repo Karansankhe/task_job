@@ -346,9 +346,9 @@ def process_text():
             "target_language_code": target_language,
             "speaker": "meera",
             "pitch": 0,
-            "pace": 1.5,
+            "pace": 0.9,
             "loudness": 1.2,
-            "speech_sample_rate": 8000,
+            "speech_sample_rate": 12000,
             "enable_preprocessing": True,
             "model": "bulbul:v1"
         };
