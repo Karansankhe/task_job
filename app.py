@@ -189,7 +189,7 @@
 #     app.run(debug=True, host='0.0.0.0', port=5000)
 
 
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, render_template_string
 from flask_cors import CORS
 import json
 import google.generativeai as genai
@@ -282,15 +282,212 @@ def send_message(message, history):
         history.append({"role": "user", "parts": message})
         chat = model.start_chat(history=history)
         response = chat.send_message(message)
-        history.append({"role": "model", "parts": response.text})
-        return response.text, history
+        short_response = response.text[:500]  # Truncate to 500 characters
+        history.append({"role": "model", "parts": short_response})
+        return short_response, history
     except Exception as e:
         print(f"Error in send_message: {e}")
         return "Error processing request.", history
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    html = '''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Karan Sankhe's AI Assistant</title>
+        <style>
+            body { background: #f8fbff; min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center; }
+            .center-card {
+                background: #fff;
+                border-radius: 20px;
+                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+                max-width: 400px;
+                width: 100%;
+                margin: 40px auto;
+                padding: 36px 28px 32px 28px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                position: relative;
+                border: 2px solid #b3d1ff;
+            }
+            .center-card h2 {
+                color: #3490fa;
+                font-size: 1.6em;
+                font-weight: 700;
+                margin: 0 0 8px 0;
+                letter-spacing: 1px;
+                text-align: center;
+            }
+            .center-card p {
+                color: #7a8ca3;
+                font-size: 1.08em;
+                margin: 0 0 24px 0;
+                text-align: center;
+            }
+            .mic-section {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .mic-btn {
+                background: #e3f0ff;
+                border: none;
+                border-radius: 50%;
+                width: 90px;
+                height: 90px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 18px 0 0 0;
+                font-size: 2.6em;
+                color: #3490fa;
+                box-shadow: 0 2px 8px #b3d1ff44;
+                cursor: pointer;
+                transition: background 0.2s, color 0.2s;
+            }
+            .mic-btn.active {
+                background: #3490fa;
+                color: #fff;
+            }
+            .mic-label {
+                background: #f4f8ff;
+                border-radius: 10px;
+                padding: 16px 18px;
+                color: #4a5a6a;
+                font-size: 1.08em;
+                margin-bottom: 10px;
+                width: 100%;
+                text-align: center;
+                box-sizing: border-box;
+            }
+            .response-box {
+                background: #f4f8ff;
+                border-radius: 10px;
+                padding: 16px 18px;
+                color: #222;
+                font-size: 1.08em;
+                margin: 18px 0 0 0;
+                width: 100%;
+                min-height: 60px;
+                box-sizing: border-box;
+                word-break: break-word;
+                text-align: left;
+            }
+            .audio-row {
+                width: 100%;
+                margin-top: 12px;
+                display: flex;
+                justify-content: center;
+            }
+            .audio-row audio {
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="center-card">
+            <h2>KARAN SANKHE'S AI ASSISTANT</h2>
+            <p>Your Personal AI Companion</p>
+            <div class="mic-section">
+                <div class="mic-label" id="micLabel">Click the microphone to start speaking...</div>
+                <button class="mic-btn" id="micBtn" title="Speak" onclick="toggleMic()">
+                    <span id="micIcon">🎤</span>
+                </button>
+            </div>
+            <div class="response-box" id="responseBox"></div>
+            <div class="audio-row">
+                <audio id="audioPlayer" controls style="display:none;"></audio>
+            </div>
+        </div>
+        <script>
+            let recognizing = false;
+            let recognition;
+            const micBtn = document.getElementById('micBtn');
+            const micLabel = document.getElementById('micLabel');
+            const responseBox = document.getElementById('responseBox');
+            const audioPlayer = document.getElementById('audioPlayer');
+            let chatHistory = [];
+            function toggleMic() {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    alert('Speech recognition not supported in this browser.');
+                    return;
+                }
+                if (recognizing) {
+                    recognition.stop();
+                    return;
+                }
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.lang = 'en-IN';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+                recognition.onstart = function() {
+                    recognizing = true;
+                    micBtn.classList.add('active');
+                    micLabel.textContent = 'Listening...';
+                };
+                recognition.onend = function() {
+                    recognizing = false;
+                    micBtn.classList.remove('active');
+                    micLabel.textContent = 'Click the microphone to start speaking...';
+                };
+                recognition.onerror = function(event) {
+                    recognizing = false;
+                    micBtn.classList.remove('active');
+                    micLabel.textContent = 'Error: ' + event.error;
+                };
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    micLabel.textContent = 'You said: ' + transcript;
+                    sendMessage(transcript);
+                };
+                recognition.start();
+            }
+            async function sendMessage(message) {
+                responseBox.textContent = 'Thinking...';
+                try {
+                    const res = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message, history: chatHistory })
+                    });
+                    const data = await res.json();
+                    if (data.message) {
+                        responseBox.textContent = data.message;
+                        chatHistory = data.history;
+                        playTTS(data.message);
+                    } else {
+                        responseBox.textContent = 'Error: ' + (data.error || 'Unknown error');
+                    }
+                } catch (e) {
+                    responseBox.textContent = 'Error: Could not connect to server.';
+                }
+            }
+            async function playTTS(text) {
+                try {
+                    const res = await fetch('/process-text', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text, language_code: 'en' })
+                    });
+                    if (!res.ok) throw new Error('TTS failed');
+                    const blob = await res.blob();
+                    audioPlayer.src = URL.createObjectURL(blob);
+                    audioPlayer.style.display = 'block';
+                    audioPlayer.play();
+                } catch (e) {
+                    // Optionally show error
+                }
+            }
+        </script>
+    </body>
+    </html>
+    '''
+    return render_template_string(html)
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
@@ -302,29 +499,8 @@ def chat():
         if not user_message:
             return jsonify({'error': 'No message provided'}), 400
         response, history = send_message(user_message, history)
-        # After generating the response, call Sarvam API for TTS
-        tts_headers = {
-            "API-Subscription-Key": sarvam_api_key
-        }
-        tts_payload = {
-            "inputs": [response],
-            "target_language_code": "en-IN",
-            "speaker": "meera",
-            "pitch": 0,
-            "pace": 1.5,
-            "loudness": 1.2,
-            "speech_sample_rate": 8000,
-            "enable_preprocessing": True,
-            "model": "bulbul:v1"
-        }
-        tts_response = requests.post("https://api.sarvam.ai/text-to-speech", headers=tts_headers, json=tts_payload)
-        audio_url = None
-        if tts_response.status_code == 200:
-            tts_data = tts_response.json()
-            if "audios" in tts_data and tts_data["audios"]:
-                base64_audio = tts_data["audios"][0]
-                audio_url = base64_audio  # This is base64, frontend should decode and play
-        return jsonify({'message': response, 'history': history, 'audio': audio_url})
+        # Only return the response and history, remove TTS/audio logic
+        return jsonify({'message': response, 'history': history})
     except Exception as e:
         print(f"Chat error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
@@ -352,12 +528,12 @@ def process_text():
             "en": "en-IN",
             "hi": "hi-IN",
             "mr": "mr-IN"
-        }
-        target_language = lang_map.get(lang, "en-IN")
+        };
+        target_language = lang_map.get(lang, "en-IN");
 
         headers = {
             "API-Subscription-Key": sarvam_api_key
-        }
+        };
 
         payload = {
             "inputs": [sanitized_text],
@@ -369,26 +545,26 @@ def process_text():
             "speech_sample_rate": 8000,
             "enable_preprocessing": True,
             "model": "bulbul:v1"
-        }
+        };
 
-        response = requests.post("https://api.sarvam.ai/text-to-speech", headers=headers, json=payload)
-        response.raise_for_status()
-        data = response.json()
+        response = requests.post("https://api.sarvam.ai/text-to-speech", headers=headers, json=payload);
+        response.raise_for_status();
+        data = response.json();
 
         if "audios" not in data or not data["audios"]:
             return jsonify({"error": "No audio data returned"}), 500
 
-        base64_audio = data["audios"][0]
-        wav_data = base64.b64decode(base64_audio)
-        audio_io = BytesIO(wav_data)
-        audio_io.seek(0)
+        base64_audio = data["audios"][0];
+        wav_data = base64.b64decode(base64_audio);
+        audio_io = BytesIO(wav_data);
+        audio_io.seek(0);
 
         return send_file(
             audio_io,
             mimetype='audio/wav',
             as_attachment=False,
             download_name='response_audio.wav'
-        )
+        );
 
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"API Request Error: {str(e)}"}), 500
