@@ -189,7 +189,7 @@
 #     app.run(debug=True, host='0.0.0.0', port=5000)
 
 
-from flask import Flask, render_template, request, jsonify, send_file, render_template_string
+from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
 import json
 import google.generativeai as genai
@@ -257,6 +257,7 @@ When responding to questions:
 9. Highlight your entrepreneurial mindset
 10. Show your commitment to continuous learning
 
+
 Common questions you should be prepared to answer:
 1. Your life story and background
 2. Your superpower in AI and ML
@@ -291,203 +292,7 @@ def send_message(message, history):
 
 @app.route('/')
 def home():
-    html = '''
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Karan Sankhe's AI Assistant</title>
-        <style>
-            body { background: #f8fbff; min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center; }
-            .center-card {
-                background: #fff;
-                border-radius: 20px;
-                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-                max-width: 400px;
-                width: 100%;
-                margin: 40px auto;
-                padding: 36px 28px 32px 28px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                position: relative;
-                border: 2px solid #b3d1ff;
-            }
-            .center-card h2 {
-                color: #3490fa;
-                font-size: 1.6em;
-                font-weight: 700;
-                margin: 0 0 8px 0;
-                letter-spacing: 1px;
-                text-align: center;
-            }
-            .center-card p {
-                color: #7a8ca3;
-                font-size: 1.08em;
-                margin: 0 0 24px 0;
-                text-align: center;
-            }
-            .mic-section {
-                width: 100%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            .mic-btn {
-                background: #e3f0ff;
-                border: none;
-                border-radius: 50%;
-                width: 90px;
-                height: 90px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin: 18px 0 0 0;
-                font-size: 2.6em;
-                color: #3490fa;
-                box-shadow: 0 2px 8px #b3d1ff44;
-                cursor: pointer;
-                transition: background 0.2s, color 0.2s;
-            }
-            .mic-btn.active {
-                background: #3490fa;
-                color: #fff;
-            }
-            .mic-label {
-                background: #f4f8ff;
-                border-radius: 10px;
-                padding: 16px 18px;
-                color: #4a5a6a;
-                font-size: 1.08em;
-                margin-bottom: 10px;
-                width: 100%;
-                text-align: center;
-                box-sizing: border-box;
-            }
-            .response-box {
-                background: #f4f8ff;
-                border-radius: 10px;
-                padding: 16px 18px;
-                color: #222;
-                font-size: 1.08em;
-                margin: 18px 0 0 0;
-                width: 100%;
-                min-height: 60px;
-                box-sizing: border-box;
-                word-break: break-word;
-                text-align: left;
-            }
-            .audio-row {
-                width: 100%;
-                margin-top: 12px;
-                display: flex;
-                justify-content: center;
-            }
-            .audio-row audio {
-                width: 100%;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="center-card">
-            <h2>KARAN SANKHE'S AI ASSISTANT</h2>
-            <p>Your Personal AI Companion</p>
-            <div class="mic-section">
-                <div class="mic-label" id="micLabel">Click the microphone to start speaking...</div>
-                <button class="mic-btn" id="micBtn" title="Speak" onclick="toggleMic()">
-                    <span id="micIcon">🎤</span>
-                </button>
-            </div>
-            <div class="response-box" id="responseBox"></div>
-            <div class="audio-row">
-                <audio id="audioPlayer" controls style="display:none;"></audio>
-            </div>
-        </div>
-        <script>
-            let recognizing = false;
-            let recognition;
-            const micBtn = document.getElementById('micBtn');
-            const micLabel = document.getElementById('micLabel');
-            const responseBox = document.getElementById('responseBox');
-            const audioPlayer = document.getElementById('audioPlayer');
-            let chatHistory = [];
-            function toggleMic() {
-                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                    alert('Speech recognition not supported in this browser.');
-                    return;
-                }
-                if (recognizing) {
-                    recognition.stop();
-                    return;
-                }
-                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-                recognition.lang = 'en-IN';
-                recognition.interimResults = false;
-                recognition.maxAlternatives = 1;
-                recognition.onstart = function() {
-                    recognizing = true;
-                    micBtn.classList.add('active');
-                    micLabel.textContent = 'Listening...';
-                };
-                recognition.onend = function() {
-                    recognizing = false;
-                    micBtn.classList.remove('active');
-                    micLabel.textContent = 'Click the microphone to start speaking...';
-                };
-                recognition.onerror = function(event) {
-                    recognizing = false;
-                    micBtn.classList.remove('active');
-                    micLabel.textContent = 'Error: ' + event.error;
-                };
-                recognition.onresult = function(event) {
-                    const transcript = event.results[0][0].transcript;
-                    micLabel.textContent = 'You said: ' + transcript;
-                    sendMessage(transcript);
-                };
-                recognition.start();
-            }
-            async function sendMessage(message) {
-                responseBox.textContent = 'Thinking...';
-                try {
-                    const res = await fetch('/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message, history: chatHistory })
-                    });
-                    const data = await res.json();
-                    if (data.message) {
-                        responseBox.textContent = data.message;
-                        chatHistory = data.history;
-                        playTTS(data.message);
-                    } else {
-                        responseBox.textContent = 'Error: ' + (data.error || 'Unknown error');
-                    }
-                } catch (e) {
-                    responseBox.textContent = 'Error: Could not connect to server.';
-                }
-            }
-            async function playTTS(text) {
-                try {
-                    const res = await fetch('/process-text', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text, language_code: 'en' })
-                    });
-                    if (!res.ok) throw new Error('TTS failed');
-                    const blob = await res.blob();
-                    audioPlayer.src = URL.createObjectURL(blob);
-                    audioPlayer.style.display = 'block';
-                    audioPlayer.play();
-                } catch (e) {
-                    // Optionally show error
-                }
-            }
-        </script>
-    </body>
-    </html>
-    '''
-    return render_template_string(html)
+    return render_template('index.html')
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
