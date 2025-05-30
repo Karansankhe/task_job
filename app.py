@@ -302,7 +302,29 @@ def chat():
         if not user_message:
             return jsonify({'error': 'No message provided'}), 400
         response, history = send_message(user_message, history)
-        return jsonify({'message': response, 'history': history})
+        # After generating the response, call Sarvam API for TTS
+        tts_headers = {
+            "API-Subscription-Key": sarvam_api_key
+        }
+        tts_payload = {
+            "inputs": [response],
+            "target_language_code": "en-IN",
+            "speaker": "meera",
+            "pitch": 0,
+            "pace": 1.5,
+            "loudness": 1.2,
+            "speech_sample_rate": 8000,
+            "enable_preprocessing": True,
+            "model": "bulbul:v1"
+        }
+        tts_response = requests.post("https://api.sarvam.ai/text-to-speech", headers=tts_headers, json=tts_payload)
+        audio_url = None
+        if tts_response.status_code == 200:
+            tts_data = tts_response.json()
+            if "audios" in tts_data and tts_data["audios"]:
+                base64_audio = tts_data["audios"][0]
+                audio_url = base64_audio  # This is base64, frontend should decode and play
+        return jsonify({'message': response, 'history': history, 'audio': audio_url})
     except Exception as e:
         print(f"Chat error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
