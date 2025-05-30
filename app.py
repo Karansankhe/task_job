@@ -198,12 +198,17 @@ import requests
 import os
 import re
 import base64
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-google_api_key = "AIzaSyBxiJpGiHEHIZLMDS2ikBa46CgjxZUhV4g"
-sarvam_api_key = "9ebcdaa4-6832-4ba2-8d3d-1cacc2748d5f"
+# Load API keys from environment variables
+google_api_key = os.getenv("GOOGLE_API_KEY")
+sarvam_api_key = os.getenv("SARVAM_API_KEY")
 
 # Load Karan's profile
 try:
@@ -258,21 +263,7 @@ When responding to questions:
 10. Show your commitment to continuous learning
 11. Answer below 500 characters concise answers.
 12. Answer like answering as karan Sankhe.
-
-Common questions you should be prepared to answer:
-1. Your life story and background
-2. Your superpower in AI and ML
-3. Areas where you want to grow
-4. Common misconceptions about you
-5. How you push your boundaries
-6. Your academic and career goals
-7. Your leadership experience
-8. Your future aspirations
-9. Your personal values and beliefs
-10. Your approach to learning and development
-
-Please respond to questions while maintaining this personality and focusing on these aspects of your life."""
-
+"""
 
 def send_message(message, history):
     try:
@@ -305,7 +296,6 @@ def chat():
         if not user_message:
             return jsonify({'error': 'No message provided'}), 400
         response, history = send_message(user_message, history)
-        # Only return the response and history, remove TTS/audio logic
         return jsonify({'message': response, 'history': history})
     except Exception as e:
         print(f"Chat error: {e}")
@@ -323,7 +313,7 @@ def process_text():
     try:
         user_data = request.get_json()
         user_text = user_data.get('text', '')
-        lang = user_data.get('language_code', 'en')  # Optional language code
+        lang = user_data.get('language_code', 'en')
 
         if not user_text:
             return jsonify({"error": "No text provided"}), 400
@@ -334,12 +324,12 @@ def process_text():
             "en": "en-IN",
             "hi": "hi-IN",
             "mr": "mr-IN"
-        };
-        target_language = lang_map.get(lang, "en-IN");
+        }
+        target_language = lang_map.get(lang, "en-IN")
 
         headers = {
             "API-Subscription-Key": sarvam_api_key
-        };
+        }
 
         payload = {
             "inputs": [sanitized_text],
@@ -351,26 +341,26 @@ def process_text():
             "speech_sample_rate": 8000,
             "enable_preprocessing": True,
             "model": "bulbul:v1"
-        };
+        }
 
-        response = requests.post("https://api.sarvam.ai/text-to-speech", headers=headers, json=payload);
-        response.raise_for_status();
-        data = response.json();
+        response = requests.post("https://api.sarvam.ai/text-to-speech", headers=headers, json=payload)
+        response.raise_for_status()
+        data = response.json()
 
         if "audios" not in data or not data["audios"]:
             return jsonify({"error": "No audio data returned"}), 500
 
-        base64_audio = data["audios"][0];
-        wav_data = base64.b64decode(base64_audio);
-        audio_io = BytesIO(wav_data);
-        audio_io.seek(0);
+        base64_audio = data["audios"][0]
+        wav_data = base64.b64decode(base64_audio)
+        audio_io = BytesIO(wav_data)
+        audio_io.seek(0)
 
         return send_file(
             audio_io,
             mimetype='audio/wav',
             as_attachment=False,
             download_name='response_audio.wav'
-        );
+        )
 
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"API Request Error: {str(e)}"}), 500
