@@ -323,7 +323,7 @@ def process_text():
         lang_map = {
             "en": "en-IN",
             "hi": "hi-IN",
-            "mr": "mr-IN"
+            
         }
         target_language = lang_map.get(lang, "en-IN")
 
@@ -372,3 +372,4 @@ def process_text():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
