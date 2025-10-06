@@ -1,4 +1,4 @@
-# from flask import Flask, render_template, request, jsonify, send_fil
+# from flask import Flask, render_template, request, jsonify, 
 # from flask_cors import CORS
 # import json
 # import google.generativeai as genai
@@ -372,5 +372,6 @@ def process_text():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
