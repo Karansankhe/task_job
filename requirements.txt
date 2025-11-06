@@ -2,7 +2,7 @@ flask
 flask-cors
 google-generativeai
 elevenlabs
-gunicorn
-python-dotenv
+v
 requests
 sarvamai
+
