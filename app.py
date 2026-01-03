@@ -1,6 +1,6 @@
 # from flask import Flask, render_template, request, jsonify
 # from flask_cors import CORS
-# import json
+# import jso
 # import google.generativeai as genai
 # from io import BytesIO
 # from elevenlabs.client import ElevenLabs
@@ -372,6 +372,7 @@ def process_text():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
