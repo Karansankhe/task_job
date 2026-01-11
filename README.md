@@ -1,4 +1,4 @@
-🎙️ Karan Sankhe's AI Assistant
+aran Sankhe's AI Assistant
 A personal AI chatbot powered by Google Gemini (Generative AI) for text-based conversations and ElevenLabs for high-quality text-to-speech responses.
 
 🚀 Features
